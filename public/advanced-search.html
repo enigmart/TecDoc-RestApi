@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TecDoc Advanced Search - Αναζήτηση Ανταλλακτικών</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .search-container {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+        }
+        .search-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 2rem;
+            color: #333;
+        }
+        .form-select:disabled {
+            background-color: #e9ecef;
+            opacity: 0.6;
+        }
+        .results-container {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .loading-spinner {
+            display: none;
+        }
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+        }
+        .step {
+            flex: 1;
+            text-align: center;
+            padding: 0.5rem;
+            border-radius: 5px;
+            margin: 0 0.25rem;
+            background: #f8f9fa;
+            color: #6c757d;
+        }
+        .step.active {
+            background: #007bff;
+            color: white;
+        }
+        .step.completed {
+            background: #28a745;
+            color: white;
+        }
+        .part-category {
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .part-category:hover {
+            border-color: #007bff;
+            background-color: #f8f9fa;
+        }
+        .part-category.selected {
+            border-color: #007bff;
+            background-color: #e3f2fd;
+        }
+        .part-item {
+            padding: 0.5rem;
+            margin: 0.25rem 0;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .part-item:hover {
+            background-color: #f0f0f0;
+        }
+        .part-item.selected {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        /* Results styling */
+        .article-row {
+            transition: background-color 0.2s;
+        }
+        
+        .article-row:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .details-row {
+            background-color: #f8f9fa;
+        }
+        
+        .expand-btn {
+            transition: all 0.2s;
+        }
+        
+        .expand-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .badge {
+            font-size: 0.8em;
+        }
+        
+        .pagination-sm .page-link {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+        
+        #results-filter {
+            border-radius: 0.375rem;
+        }
+        
+        .table-hover tbody tr:hover {
+            background-color: rgba(0, 123, 255, 0.075);
+        }
+        
+        /* Pagination styling */
+        #page-input {
+            text-align: center;
+            border: 1px solid #dee2e6;
+        }
+        
+        #page-input:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        
+        .page-link.bg-light {
+            padding: 0.375rem 0.75rem;
+        }
+        
+        .filter-count-alert {
+            border-left: 4px solid #17a2b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="search-container">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    <div class="search-card">
+                        <h2 class="text-center mb-4">
+                            <i class="fas fa-car me-2"></i>
+                            Αναζήτηση Ανταλλακτικών TecDoc
+                        </h2>
+                        
+                        <!-- Step Indicator -->
+                        <div class="step-indicator">
+                            <div class="step active" id="step-1">
+                                <i class="fas fa-car-side"></i><br>
+                                <small>Τύπος Οχήματος</small>
+                            </div>
+                            <div class="step" id="step-2">
+                                <i class="fas fa-industry"></i><br>
+                                <small>Μάρκα</small>
+                            </div>
+                            <div class="step" id="step-3">
+                                <i class="fas fa-car"></i><br>
+                                <small>Μοντέλο</small>
+                            </div>
+                            <div class="step" id="step-4">
+                                <i class="fas fa-cogs"></i><br>
+                                <small>Έκδοση</small>
+                            </div>
+                            <div class="step" id="step-5">
+                                <i class="fas fa-wrench"></i><br>
+                                <small>Ανταλλακτικό</small>
+                            </div>
+                        </div>
+
+                        <!-- Search Form -->
+                        <form id="search-form">
+                            <div class="row">
+                                <!-- Vehicle Type -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="vehicle-type" class="form-label">
+                                        <i class="fas fa-car-side me-1"></i>
+                                        Τύπος Οχήματος *
+                                    </label>
+                                    <select class="form-select" id="vehicle-type" required>
+                                        <option value="">Επιλέξτε τύπο οχήματος...</option>
+                                    </select>
+                                </div>
+
+                                <!-- Manufacturer -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="manufacturer" class="form-label">
+                                        <i class="fas fa-industry me-1"></i>
+                                        Μάρκα *
+                                    </label>
+                                    <select class="form-select" id="manufacturer" disabled required>
+                                        <option value="">Επιλέξτε μάρκα...</option>
+                                    </select>
+                                    <div class="loading-spinner" id="manufacturer-loading">
+                                        <small><i class="fas fa-spinner fa-spin"></i> Φόρτωση μαρκών...</small>
+                                    </div>
+                                </div>
+
+                                <!-- Model Series -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="model-series" class="form-label">
+                                        <i class="fas fa-car me-1"></i>
+                                        Μοντέλο *
+                                    </label>
+                                    <select class="form-select" id="model-series" disabled required>
+                                        <option value="">Επιλέξτε μοντέλο...</option>
+                                    </select>
+                                    <div class="loading-spinner" id="model-loading">
+                                        <small><i class="fas fa-spinner fa-spin"></i> Φόρτωση μοντέλων...</small>
+                                    </div>
+                                </div>
+
+                                <!-- Vehicle Version -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="vehicle-version" class="form-label">
+                                        <i class="fas fa-cogs me-1"></i>
+                                        Έκδοση *
+                                    </label>
+                                    <select class="form-select" id="vehicle-version" disabled required>
+                                        <option value="">Επιλέξτε έκδοση...</option>
+                                    </select>
+                                    <div class="loading-spinner" id="version-loading">
+                                        <small><i class="fas fa-spinner fa-spin"></i> Φόρτωση εκδόσεων...</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Part Categories -->
+                            <div class="mb-4" id="part-categories-container" style="display: none;">
+                                <label class="form-label">
+                                    <i class="fas fa-wrench me-1"></i>
+                                    Κατηγορία Ανταλλακτικού *
+                                </label>
+                                <div id="part-categories"></div>
+                            </div>
+
+                            <!-- Search Button -->
+                            <div class="text-center">
+                                <button type="submit" class="btn btn-primary btn-lg" id="search-btn" disabled>
+                                    <i class="fas fa-search me-2"></i>
+                                    Αναζήτηση Ανταλλακτικών
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Section -->
+    <div class="container mt-5" id="results-section" style="display: none;">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list me-2"></i>
+                            Αποτελέσματα Αναζήτησης
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="search-results" class="results-container"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin + '/tecdoc-api/public/api';
+        let selectedPartCategory = '';
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded, initializing...');
+            console.log('API_BASE:', API_BASE);
+            loadVehicleTypes();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            document.getElementById('vehicle-type').addEventListener('change', onVehicleTypeChange);
+            document.getElementById('manufacturer').addEventListener('change', onManufacturerChange);
+            document.getElementById('model-series').addEventListener('change', onModelSeriesChange);
+            document.getElementById('vehicle-version').addEventListener('change', onVehicleVersionChange);
+            document.getElementById('search-form').addEventListener('submit', onSearchSubmit);
+        }
+
+        async function loadVehicleTypes() {
+            try {
+                const response = await fetch(`${API_BASE}/vehicle-search/vehicle-types`);
+                const types = await response.json();
+                
+                const select = document.getElementById('vehicle-type');
+                types.forEach(type => {
+                    const option = document.createElement('option');
+                    option.value = type.id;
+                    option.textContent = type.name;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading vehicle types:', error);
+            }
+        }
+
+        async function onVehicleTypeChange() {
+            const vehicleType = document.getElementById('vehicle-type').value;
+            console.log('Vehicle type changed to:', vehicleType);
+            
+            if (!vehicleType) {
+                console.log('No vehicle type selected, resetting...');
+                resetSubsequentSelects(['manufacturer', 'model-series', 'vehicle-version']);
+                return;
+            }
+
+            updateStepIndicator(2);
+            resetSubsequentSelects(['model-series', 'vehicle-version']); // Reset only subsequent selects, not manufacturer
+            await loadManufacturers(vehicleType);
+        }
+
+        async function loadManufacturers(vehicleType) {
+            console.log('Loading manufacturers for vehicle type:', vehicleType);
+            showLoading('manufacturer-loading');
+            
+            try {
+                const url = `${API_BASE}/vehicle-search/manufacturers?vehicle_type=${vehicleType}`;
+                console.log('Fetching from URL:', url);
+                
+                const response = await fetch(url);
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const manufacturers = await response.json();
+                console.log('Loaded manufacturers:', manufacturers.length);
+                
+                const select = document.getElementById('manufacturer');
+                select.innerHTML = '<option value="">Επιλέξτε μάρκα...</option>';
+                
+                manufacturers.forEach(manufacturer => {
+                    const option = document.createElement('option');
+                    option.value = manufacturer.MFA_ID;
+                    option.textContent = `${manufacturer.MFA_BRAND} (${manufacturer.MFA_MODELS_COUNT} μοντέλα)`;
+                    select.appendChild(option);
+                });
+                
+                select.disabled = false;
+                console.log('Manufacturer dropdown enabled with', manufacturers.length, 'options');
+            } catch (error) {
+                console.error('Error loading manufacturers:', error);
+                alert('Σφάλμα κατά τη φόρτωση των μαρκών: ' + error.message);
+            } finally {
+                hideLoading('manufacturer-loading');
+            }
+        }
+
+        async function onManufacturerChange() {
+            const manufacturerId = document.getElementById('manufacturer').value;
+            const vehicleType = document.getElementById('vehicle-type').value;
+            if (!manufacturerId) return;
+
+            updateStepIndicator(3);
+            resetSubsequentSelects(['vehicle-version']); // Reset only subsequent selects
+            await loadModelSeries(manufacturerId, vehicleType);
+        }
+
+        async function loadModelSeries(manufacturerId, vehicleType) {
+            showLoading('model-loading');
+            try {
+                const response = await fetch(`${API_BASE}/vehicle-search/manufacturers/${manufacturerId}/models?vehicle_type=${vehicleType}`);
+                const models = await response.json();
+                
+                const select = document.getElementById('model-series');
+                select.innerHTML = '<option value="">Επιλέξτε μοντέλο...</option>';
+                
+                models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.MS_ID;
+                    option.textContent = `Model ${model.MS_ID}`;
+                    if (model.MS_CI_FROM && model.MS_CI_TO) {
+                        option.textContent += ` (${model.MS_CI_FROM} - ${model.MS_CI_TO})`;
+                    }
+                    select.appendChild(option);
+                });
+                
+                select.disabled = false;
+            } catch (error) {
+                console.error('Error loading model series:', error);
+            } finally {
+                hideLoading('model-loading');
+            }
+        }
+
+        async function onModelSeriesChange() {
+            const modelSeriesId = document.getElementById('model-series').value;
+            if (!modelSeriesId) return;
+
+            updateStepIndicator(4);
+            await loadVehicleVersions(modelSeriesId);
+        }
+
+        async function loadVehicleVersions(modelSeriesId) {
+            showLoading('version-loading');
+            try {
+                const response = await fetch(`${API_BASE}/vehicle-search/models/${modelSeriesId}/versions`);
+                const versions = await response.json();
+                
+                const select = document.getElementById('vehicle-version');
+                select.innerHTML = '<option value="">Επιλέξτε έκδοση...</option>';
+                
+                versions.forEach(version => {
+                    const option = document.createElement('option');
+                    option.value = version.PC_ID;
+                    option.textContent = `Version ${version.PC_ID} (CTM: ${version.PC_CTM})`;
+                    select.appendChild(option);
+                });
+                
+                select.disabled = false;
+            } catch (error) {
+                console.error('Error loading vehicle versions:', error);
+            } finally {
+                hideLoading('version-loading');
+            }
+        }
+
+        async function onVehicleVersionChange() {
+            const versionId = document.getElementById('vehicle-version').value;
+            if (!versionId) return;
+
+            updateStepIndicator(5);
+            await loadPartCategories();
+        }
+
+        async function loadPartCategories() {
+            try {
+                const response = await fetch(`${API_BASE}/vehicle-search/part-categories`);
+                const categories = await response.json();
+                
+                const container = document.getElementById('part-categories');
+                container.innerHTML = '';
+                
+                Object.entries(categories).forEach(([key, category]) => {
+                    const categoryDiv = document.createElement('div');
+                    categoryDiv.className = 'part-category';
+                    categoryDiv.innerHTML = `
+                        <h6><i class="fas fa-tools me-2"></i>${category.name}</h6>
+                        <div class="row">
+                            ${Object.entries(category.parts).map(([partKey, partName]) => `
+                                <div class="col-md-6">
+                                    <div class="part-item" data-part="${partKey}">
+                                        <i class="fas fa-wrench me-2"></i>${partName}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                    container.appendChild(categoryDiv);
+                });
+                
+                // Add click handlers for part selection
+                container.querySelectorAll('.part-item').forEach(item => {
+                    item.addEventListener('click', function() {
+                        // Remove previous selection
+                        container.querySelectorAll('.part-item').forEach(i => i.classList.remove('selected'));
+                        // Add selection to clicked item
+                        this.classList.add('selected');
+                        selectedPartCategory = this.dataset.part;
+                        document.getElementById('search-btn').disabled = false;
+                    });
+                });
+                
+                document.getElementById('part-categories-container').style.display = 'block';
+            } catch (error) {
+                console.error('Error loading part categories:', error);
+            }
+        }
+
+        async function onSearchSubmit(event) {
+            event.preventDefault();
+            
+            if (!selectedPartCategory) {
+                alert('Παρακαλώ επιλέξτε κατηγορία ανταλλακτικού');
+                return;
+            }
+
+            const searchData = {
+                vehicle_type: document.getElementById('vehicle-type').value,
+                manufacturer_id: parseInt(document.getElementById('manufacturer').value),
+                model_series_id: parseInt(document.getElementById('model-series').value),
+                vehicle_version_id: parseInt(document.getElementById('vehicle-version').value),
+                part_category: selectedPartCategory
+            };
+
+            console.log('Sending search data:', searchData);
+            currentSearchData = searchData; // Store for pagination
+            await searchArticles(searchData);
+        }
+
+        async function searchArticles(searchData) {
+            const resultsSection = document.getElementById('results-section');
+            const resultsContainer = document.getElementById('search-results');
+            
+            resultsContainer.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><br>Αναζήτηση ανταλλακτικών...</div>';
+            resultsSection.style.display = 'block';
+            
+            try {
+                const response = await fetch(`${API_BASE}/vehicle-search/search-articles`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(searchData)
+                });
+                
+                const results = await response.json();
+                console.log('Search results received:', results);
+                console.log('Results data length:', results.data ? results.data.length : 'No data property');
+                console.log('Results total:', results.total);
+                
+                if (results.data && results.data.length > 0) {
+                    displaySearchResults(results, resultsContainer);
+                } else {
+                    resultsContainer.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Δεν βρέθηκαν ανταλλακτικά για τα επιλεγμένα κριτήρια
+                        </div>
+                        <div class="alert alert-info">
+                            <strong>Debug Info:</strong><br>
+                            Response total: ${results.total || 'undefined'}<br>
+                            Data array length: ${results.data ? results.data.length : 'No data array'}<br>
+                            Part category: ${searchData.part_category}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error searching articles:', error);
+                resultsContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Σφάλμα κατά την αναζήτηση: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function updateStepIndicator(step) {
+            for (let i = 1; i <= 5; i++) {
+                const stepElement = document.getElementById(`step-${i}`);
+                if (i < step) {
+                    stepElement.className = 'step completed';
+                } else if (i === step) {
+                    stepElement.className = 'step active';
+                } else {
+                    stepElement.className = 'step';
+                }
+            }
+        }
+
+        function resetSubsequentSelects(selectIds) {
+            selectIds.forEach(id => {
+                const select = document.getElementById(id);
+                select.innerHTML = '<option value="">Επιλέξτε...</option>';
+                select.disabled = true;
+            });
+            
+            // Hide part categories and disable search
+            document.getElementById('part-categories-container').style.display = 'none';
+            document.getElementById('search-btn').disabled = true;
+            selectedPartCategory = '';
+        }
+
+        function showLoading(loadingId) {
+            document.getElementById(loadingId).style.display = 'block';
+        }
+
+        function hideLoading(loadingId) {
+            document.getElementById(loadingId).style.display = 'none';
+        }
+
+        function displaySearchResults(results, container) {
+            let html = `
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <div class="alert alert-success mb-0">
+                            <i class="fas fa-check-circle me-2"></i>
+                            Βρέθηκαν <strong>${results.total.toLocaleString()}</strong> ανταλλακτικά
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <select class="form-select" id="brand-filter">
+                            <option value="">Όλες οι μάρκες</option>
+                            ${results.available_brands ? results.available_brands.map(brand => 
+                                `<option value="${brand}">${brand}</option>`
+                            ).join('') : ''}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" class="form-control" id="results-filter" 
+                                   placeholder="Φιλτράρισμα κωδικών...">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover" id="results-table">
+                        <thead class="table-dark">
+                            <tr>
+                                <th width="5%"></th>
+                                <th width="35%">Κωδικός Προϊόντος</th>
+                                <th width="30%">Μάρκα</th>
+                                <th width="15%">CTM</th>
+                                <th width="15%">Ενέργειες</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-tbody">
+            `;
+            
+            results.data.forEach((article, index) => {
+                html += `
+                    <tr class="article-row" data-article-id="${article.ART_ID}">
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary expand-btn" 
+                                    onclick="toggleArticleDetails(${article.ART_ID}, this)">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </td>
+                        <td>
+                            <strong>${article.ART_ARTICLE_NR}</strong>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">${article.ART_SUP_BRAND}</span>
+                        </td>
+                        <td>
+                            <small class="text-muted">${article.ART_CTM || 'N/A'}</small>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-info" onclick="viewArticleDetails(${article.ART_ID})">
+                                <i class="fas fa-eye"></i> Λεπτομέρειες
+                            </button>
+                        </td>
+                    </tr>
+                    <tr class="details-row" id="details-${article.ART_ID}" style="display: none;">
+                        <td colspan="5">
+                            <div class="p-3 bg-light">
+                                <div id="details-content-${article.ART_ID}">
+                                    <div class="text-center">
+                                        <i class="fas fa-spinner fa-spin"></i> Φόρτωση λεπτομερειών...
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div>
+                        <small class="text-muted">
+                            Εμφάνιση ${results.from} - ${results.to} από ${results.total.toLocaleString()} αποτελέσματα
+                        </small>
+                    </div>
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0" id="pagination-controls">
+            `;
+            
+            // Advanced pagination controls
+            if (results.current_page > 1) {
+                html += `
+                    <li class="page-item">
+                        <a class="page-link" href="#" onclick="goToPage(1)">
+                            <i class="fas fa-angle-double-left"></i> Πρώτη
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="#" onclick="goToPage(${results.current_page - 1})">
+                            <i class="fas fa-angle-left"></i> Προηγούμενη
+                        </a>
+                    </li>
+                `;
+            }
+            
+            // Page number input for quick navigation
+            html += `
+                <li class="page-item">
+                    <div class="page-link bg-light">
+                        <div class="d-flex align-items-center">
+                            <span class="me-2">Σελίδα</span>
+                            <input type="number" class="form-control form-control-sm" 
+                                   id="page-input" value="${results.current_page}" 
+                                   min="1" max="${results.last_page}" 
+                                   style="width: 70px;" 
+                                   onchange="goToPage(this.value)">
+                            <span class="ms-2">από ${results.last_page}</span>
+                        </div>
+                    </div>
+                </li>
+            `;
+            
+            if (results.current_page < results.last_page) {
+                html += `
+                    <li class="page-item">
+                        <a class="page-link" href="#" onclick="goToPage(${results.current_page + 1})">
+                            Επόμενη <i class="fas fa-angle-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="#" onclick="goToPage(${results.last_page})">
+                            Τελευταία <i class="fas fa-angle-double-right"></i>
+                        </a>
+                    </li>
+                `;
+            }
+            
+            html += `
+                        </ul>
+                    </nav>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+            
+            // Add filter functionality
+            document.getElementById('results-filter').addEventListener('input', filterResults);
+            document.getElementById('brand-filter').addEventListener('change', filterResults);
+        }
+
+        function filterResults() {
+            const textFilter = document.getElementById('results-filter').value.toLowerCase();
+            const brandFilter = document.getElementById('brand-filter').value;
+            const rows = document.querySelectorAll('.article-row');
+            
+            let visibleCount = 0;
+            
+            rows.forEach(row => {
+                const articleNumber = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                const brandBadge = row.querySelector('.badge').textContent;
+                const detailsRow = document.getElementById(`details-${row.dataset.articleId}`);
+                
+                const matchesText = !textFilter || articleNumber.includes(textFilter);
+                const matchesBrand = !brandFilter || brandBadge === brandFilter;
+                
+                if (matchesText && matchesBrand) {
+                    row.style.display = '';
+                    visibleCount++;
+                    if (detailsRow && detailsRow.style.display !== 'none') {
+                        detailsRow.style.display = '';
+                    }
+                } else {
+                    row.style.display = 'none';
+                    if (detailsRow) {
+                        detailsRow.style.display = 'none';
+                    }
+                }
+            });
+            
+            // Update visible count
+            updateFilterCount(visibleCount, rows.length);
+        }
+        
+        function updateFilterCount(visible, total) {
+            const existingAlert = document.querySelector('.filter-count-alert');
+            if (existingAlert) {
+                existingAlert.remove();
+            }
+            
+            if (visible < total) {
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-info alert-sm mt-2 filter-count-alert';
+                alert.innerHTML = `
+                    <i class="fas fa-filter me-2"></i>
+                    Εμφάνιση ${visible} από ${total} αποτελέσματα
+                    <button class="btn btn-sm btn-outline-secondary ms-2" onclick="clearFilters()">
+                        <i class="fas fa-times"></i> Καθαρισμός φίλτρων
+                    </button>
+                `;
+                document.querySelector('.table-responsive').insertAdjacentElement('beforebegin', alert);
+            }
+        }
+        
+        function clearFilters() {
+            document.getElementById('results-filter').value = '';
+            document.getElementById('brand-filter').value = '';
+            filterResults();
+        }
+
+        async function toggleArticleDetails(articleId, button) {
+            const detailsRow = document.getElementById(`details-${articleId}`);
+            const icon = button.querySelector('i');
+            
+            if (detailsRow.style.display === 'none') {
+                // Show details
+                detailsRow.style.display = '';
+                icon.className = 'fas fa-minus';
+                button.classList.remove('btn-outline-primary');
+                button.classList.add('btn-primary');
+                
+                // Load details if not already loaded
+                const content = document.getElementById(`details-content-${articleId}`);
+                if (content.innerHTML.includes('Φόρτωση λεπτομερειών')) {
+                    await loadArticleDetails(articleId);
+                }
+            } else {
+                // Hide details
+                detailsRow.style.display = 'none';
+                icon.className = 'fas fa-plus';
+                button.classList.remove('btn-primary');
+                button.classList.add('btn-outline-primary');
+            }
+        }
+
+        async function loadArticleDetails(articleId) {
+            try {
+                const response = await fetch(`${API_BASE}/vehicle-search/articles/${articleId}/details`);
+                const details = await response.json();
+                
+                const content = document.getElementById(`details-content-${articleId}`);
+                content.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-info-circle me-2"></i>Βασικές Πληροφορίες</h6>
+                            <table class="table table-sm">
+                                <tr><td><strong>ID:</strong></td><td>${details.basic_info.id}</td></tr>
+                                <tr><td><strong>Κωδικός:</strong></td><td>${details.basic_info.article_number}</td></tr>
+                                <tr><td><strong>Μάρκα:</strong></td><td>${details.basic_info.brand}</td></tr>
+                                <tr><td><strong>CTM:</strong></td><td>${details.basic_info.ctm || 'N/A'}</td></tr>
+                                <tr><td><strong>Αντικατάσταση:</strong></td><td>${details.basic_info.replacement ? 'Ναι' : 'Όχι'}</td></tr>
+                                <tr><td><strong>Αξεσουάρ:</strong></td><td>${details.basic_info.accessory ? 'Ναι' : 'Όχι'}</td></tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-building me-2"></i>Πληροφορίες Προμηθευτή</h6>
+                            ${details.supplier_info ? `
+                                <table class="table table-sm">
+                                    <tr><td><strong>ID:</strong></td><td>${details.supplier_info.id}</td></tr>
+                                    <tr><td><strong>Μάρκα:</strong></td><td>${details.supplier_info.brand}</td></tr>
+                                    <tr><td><strong>Πλήρες Όνομα:</strong></td><td>${details.supplier_info.full_name}</td></tr>
+                                </table>
+                            ` : '<p class="text-muted">Δεν υπάρχουν πληροφορίες προμηθευτή</p>'}
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            <i class="fas fa-clock me-1"></i>
+                            Τελευταία ενημέρωση: ${details.additional_info.last_updated}
+                        </small>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading article details:', error);
+                const content = document.getElementById(`details-content-${articleId}`);
+                content.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Σφάλμα κατά τη φόρτωση των λεπτομερειών
+                    </div>
+                `;
+            }
+        }
+
+        function viewArticleDetails(articleId) {
+            // This could open a modal or navigate to a detailed page
+            alert(`Εμφάνιση λεπτομερειών για το άρθρο ${articleId}`);
+        }
+
+        let currentSearchData = null; // Store current search parameters
+        
+        function goToPage(page) {
+            page = parseInt(page);
+            if (!currentSearchData || page < 1) return;
+            
+            // Add page parameter to search data
+            const searchDataWithPage = { ...currentSearchData, page: page };
+            
+            console.log('Going to page:', page);
+            searchArticlesWithPage(searchDataWithPage);
+        }
+        
+        async function searchArticlesWithPage(searchData) {
+            const resultsSection = document.getElementById('results-section');
+            const resultsContainer = document.getElementById('search-results');
+            
+            // Show loading in results area
+            resultsContainer.innerHTML = '<div class="text-center p-4"><i class="fas fa-spinner fa-spin fa-2x"></i><br>Φόρτωση σελίδας...</div>';
+            
+            try {
+                let url = `${API_BASE}/vehicle-search/search-articles`;
+                if (searchData.page) {
+                    url += `?page=${searchData.page}`;
+                }
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(searchData)
+                });
+                
+                const results = await response.json();
+                console.log('Page results received:', results);
+                
+                if (results.data && results.data.length > 0) {
+                    displaySearchResults(results, resultsContainer);
+                } else {
+                    resultsContainer.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Δεν βρέθηκαν αποτελέσματα για αυτή τη σελίδα
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading page:', error);
+                resultsContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Σφάλμα κατά τη φόρτωση της σελίδας: ${error.message}
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

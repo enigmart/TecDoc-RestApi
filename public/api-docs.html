@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TecDoc API v2 Documentation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            height: 100vh;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+        }
+        .content {
+            height: 100vh;
+            overflow-y: auto;
+        }
+        .endpoint {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+        .method-get { background: #d4edda; color: #155724; }
+        .method-post { background: #d1ecf1; color: #0c5460; }
+        .method-delete { background: #f8d7da; color: #721c24; }
+        .response-example {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .nav-link.active {
+            background: #007bff !important;
+            color: white !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 sidebar p-3">
+                <h4 class="mb-4">
+                    <i class="fas fa-cog me-2"></i>
+                    TecDoc API v2
+                </h4>
+                
+                <div class="mb-4">
+                    <h6>🔐 Authentication</h6>
+                    <ul class="nav nav-pills flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#auth-overview">Overview</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#create-token">Create Token</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#token-info">Token Info</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="mb-4">
+                    <h6>🚗 Vehicle Data</h6>
+                    <ul class="nav nav-pills flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#vehicle-types">Vehicle Types</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#manufacturers">Manufacturers</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#models">Models</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#versions">Versions</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="mb-4">
+                    <h6>🔧 Articles & Parts</h6>
+                    <ul class="nav nav-pills flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#part-categories">Part Categories</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#search-articles">Search Articles</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#article-details">Article Details</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#enhanced-article-details"><i class="fas fa-star text-warning me-1"></i>Enhanced Article Details</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="mb-4">
+                    <h6>📊 Features</h6>
+                    <ul class="nav nav-pills flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#light-full-modes">Light/Full Modes</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#caching">Caching</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#rate-limiting">Rate Limiting</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9 content p-4">
+                <div class="mb-5">
+                    <h1>🚀 TecDoc API v2 Documentation</h1>
+                    <p class="lead">Complete REST API for TecDoc vehicle parts database with authentication, caching, and comprehensive data access.</p>
+                    
+                    <div class="alert alert-info">
+                        <h5><i class="fas fa-info-circle me-2"></i>Base URL</h5>
+                        <code>http://koupkastecdoc.gr/tecdoc-api/public/api/v2</code>
+                    </div>
+                </div>
+
+                <!-- Authentication Overview -->
+                <section id="auth-overview" class="mb-5">
+                    <h2>🔐 Authentication</h2>
+                    <p>All API endpoints (except token creation) require authentication using Bearer tokens.</p>
+                    
+                    <div class="alert alert-warning">
+                        <h6>Required Header</h6>
+                        <code>Authorization: Bearer YOUR_TOKEN_HERE</code>
+                    </div>
+
+                    <h5>Token Features:</h5>
+                    <ul>
+                        <li><strong>Duration:</strong> 30 days</li>
+                        <li><strong>Rate Limit:</strong> 1000 requests/hour</li>
+                        <li><strong>Scopes:</strong> read, write, admin</li>
+                        <li><strong>Auto-refresh:</strong> Available</li>
+                    </ul>
+                </section>
+
+                <!-- Create Token -->
+                <section id="create-token" class="mb-5">
+                    <div class="endpoint">
+                        <div class="card-header method-post p-3">
+                            <h4><span class="badge bg-primary">POST</span> /v2/auth/create-token</h4>
+                            <p class="mb-0">Create a new API authentication token</p>
+                        </div>
+                        <div class="card-body">
+                            <h6>Request Body:</h6>
+                            <pre><code class="language-json">{
+  "name": "My API Token",
+  "scopes": ["read", "write"]
+}</code></pre>
+
+                            <h6>Response Example:</h6>
+                            <div class="response-example">
+                                <pre><code class="language-json">{
+  "success": true,
+  "message": "API token created successfully",
+  "data": {
+    "token": "tecdoc_3ddMA3ejtIChy9qvWdGCwlLvHvFlqVLiVX1W4Q76MSZU63ACtJGHXoTUdfwi",
+    "name": "My API Token",
+    "scopes": ["read", "write"],
+    "expires_at": "2025-12-24T11:35:39.000000Z",
+    "requests_limit": 1000
+  },
+  "meta": {
+    "token_id": 1,
+    "created_at": "2025-11-24T11:35:39.000000Z"
+  }
+}</code></pre>
+                            </div>
+
+                            <h6>cURL Example:</h6>
+                            <pre><code class="language-bash">curl -X POST "http://koupkastecdoc.gr/tecdoc-api/public/api/v2/auth/create-token" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"My API Token","scopes":["read","write"]}'</code></pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Token Info -->
+                <section id="token-info" class="mb-5">
+                    <div class="endpoint">
+                        <div class="card-header method-get p-3">
+                            <h4><span class="badge bg-success">GET</span> /v2/auth/token-info</h4>
+                            <p class="mb-0">Get information about your current token</p>
+                        </div>
+                        <div class="card-body">
+                            <h6>Headers Required:</h6>
+                            <pre><code>Authorization: Bearer YOUR_TOKEN</code></pre>
+
+                            <h6>Response Example:</h6>
+                            <div class="response-example">
+                                <pre><code class="language-json">{
+  "success": true,
+  "data": {
+    "name": "My API Token",
+    "scopes": ["read", "write"],
+    "expires_at": "2025-12-24T11:35:39.000000Z",
+    "requests_used": 15,
+    "requests_remaining": 985,
+    "requests_limit": 1000,
+    "last_used_at": "2025-11-24T12:00:00.000000Z",
+    "is_active": true
+  },
+  "api_info": {
+    "version": "2.0",
+    "rate_limit": {
+      "remaining": 985,
+      "reset_at": "2025-11-24T13:00:00.000000Z"
+    }
+  }
+}</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Vehicle Types -->
+                <section id="vehicle-types" class="mb-5">
+                    <div class="endpoint">
+                        <div class="card-header method-get p-3">
+                            <h4><span class="badge bg-success">GET</span> /v2/vehicle-types</h4>
+                            <p class="mb-0">Get available vehicle types</p>
+                        </div>
+                        <div class="card-body">
+                            <h6>Query Parameters:</h6>
+                            <ul>
+                                <li><code>mode</code> - Data mode: <code>light</code> (default) or <code>full</code></li>
+                            </ul>
+
+                            <h6>Light Mode Response:</h6>
+                            <div class="response-example">
+                                <pre><code class="language-json">{
+  "success": true,
+  "message": "Vehicle types retrieved successfully",
+  "data": [
+    {"id": "PC", "name": "Αυτοκίνητο"},
+    {"id": "CV", "name": "Φορτηγό"},
+    {"id": "MC", "name": "Μοτοσικλέτα"}
+  ],
+  "meta": {"mode": "light"},
+  "performance": {"query_time_ms": 0.01, "cached": false}
+}</code></pre>
+                            </div>
+
+                            <h6>Full Mode Response:</h6>
+                            <div class="response-example">
+                                <pre><code class="language-json">{
+  "success": true,
+  "data": [
+    {
+      "id": "PC",
+      "name": "Αυτοκίνητο",
+      "description": "Επιβατικά αυτοκίνητα και ελαφρά οχήματα",
+      "manufacturers_count": 667,
+      "supported": true
+    }
+  ],
+  "meta": {"mode": "full"}
+}</code></pre>
+                            </div>
+
+                            <h6>Cache Headers:</h6>
+                            <ul>
+                                <li><code>Cache-Control: public, max-age=7200</code></li>
+                                <li><code>ETag: "abc123..."</code></li>
+                                <li><code>X-Cache-TTL: 7200</code></li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Manufacturers -->
+                <section id="manufacturers" class="mb-5">
+                    <div class="endpoint">
+                        <div class="card-header method-get p-3">
+                            <h4><span class="badge bg-success">GET</span> /v2/manufacturers</h4>
+                            <p class="mb-0">Get manufacturers by vehicle type</p>
+                        </div>
+                        <div class="card-body">
+                            <h6>Query Parameters:</h6>
+                            <ul>
+                                <li><code>vehicle_type</code> - Vehicle type: <code>PC</code>, <code>CV</code>, or <code>MC</code></li>
+                                <li><code>mode</code> - Data mode: <code>light</code> (default) or <code>full</code></li>
+                            </ul>
+
+                            <h6>Light Mode Response:</h6>
+                            <div class="response-example">
+                                <pre><code class="language-json">{
+  "success": true,
+  "message": "Manufacturers retrieved successfully",
+  "data": [
+    {
+      "id": 36,
+      "name": "BMW",
+      "models_count": 150
+    }
+  ],
+  "meta": {
+    "vehicle_type": "PC",
+    "mode": "light",
+    "total_count": 667
+  }
+}</code></pre>
+                            </div>
+
+                            <h6>Full Mode Response:</h6>
+                            <div class="response-example">
+                                <pre><code class="language-json">{
+  "success": true,
+  "data": [
+    {
+      "id": 36,
+      "name": "BMW",
+      "models_count": 150,
+      "country": "Germany",
+      "founded_year": 1916,
+      "website": "https://www.bmw.com",
+      "logo_url": "https://logos.example.com/bmw.png",
+      "is_active": true
+    }
+  ]
+}</code></pre>
+                            </div>
+
+                            <h6>cURL Example:</h6>
+                            <pre><code class="language-bash">curl "http://koupkastecdoc.gr/tecdoc-api/public/api/v2/manufacturers?vehicle_type=PC&mode=full" \
+  -H "Authorization: Bearer YOUR_TOKEN"</code></pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Models -->
+                <section id="models" class="mb-5">
+                    <div class="endpoint">
+                        <div class="card-header method-get p-3">
+                            <h4><span class="badge bg-success">GET</span> /v2/manufacturers/{id}/models</h4>
+                            <p class="mb-0">Get model series by manufacturer</p>
+                        </div>
+                        <div class="card-body">
+                            <h6>Path Parameters:</h6>
+                            <ul>
+                                <li><code>id</code> - Manufacturer ID (required)</li>
+                            </ul>
+
+                            <h6>Query Parameters:</h6>
+                            <ul>
+                                <li><code>vehicle_type</code> - Vehicle type: <code>PC</code>, <code>CV</code>, or <code>MC</code></li>
+                                <li><code>mode</code> - Data mode: <code>light</code> (default) or <code>full</code></li>
+                            </ul>
+
+                            <h6>Light Mode Response:</h6>
+                            <div class="response-example">
+                                <pre><code class="language-json">{
+  "success": true,
+  "message": "Model series retrieved successfully",
+  "data": [
+    {
+      "id": 326,
+      "name": "3 Series",
+      "year_start": "1990-01",
+      "year_end": "2024-12"
+    }
+  ],
+  "meta": {
+    "manufacturer_id": 36,
+    "vehicle_type": "PC",
+    "mode": "light"
+  }
+}</code></pre>
+                            </div>
+
+                            <h6>Full Mode Response:</h6>
+                            <div class="response-example">
+                                <pre><code class="language-json">{
+  "success": true,
+  "data": [
+    {
+      "id": 326,
+      "name": "3 Series",
+      "year_start": "1990-01",
+      "year_end": "2024-12",
+      "manufacturer": {
+        "id": 36,
+        "name": "BMW"
+      },
+      "production_years": "1990-01 - 2024-12",
+      "body_types": ["Sedan", "Hatchback", "SUV"],
+      "engine_types": ["Petrol", "Diesel", "Hybrid"],
+      "versions_count": 45
+    }
+  ]
+}</code></pre>
+                            </div>
+
+                            <h6>cURL Example:</h6>
+                            <pre><code class="language-bash">curl "http://koupkastecdoc.gr/tecdoc-api/public/api/v2/manufacturers/36/models?vehicle_type=PC&mode=full" \
+  -H "Authorization: Bearer YOUR_TOKEN"</code></pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Versions -->
+                <section id="versions" class="mb-5">
+                    <div class="endpoint">
+                        <div class="card-header method-get p-3">
+                            <h4><span class="badge bg-success">GET</span> /v2/models/{id}/versions</h4>
+                            <p class="mb-0">Get vehicle versions by model series</p>
+                        </div>
+                        <div class="card-body">
+                            <h6>Path Parameters:</h6>
+                            <ul>
+                                <li><code>id</code> - Model series ID (required)</li>
+                            </ul>
+
+                            <h6>Query Parameters:</h6>
+                            <ul>
+                                <li><code>mode</code> - Data mode: <code>light</code> (default) or <code>full</code></li>
+                            </ul>
+
+                            <h6>Light Mode Response:</h6>
+                            <div class="response-example">
+                                <pre><code class="language-json">{
+  "success": true,
+  "message": "Vehicle versions retrieved successfully",
+  "data": [
+    {
+      "id": 1432,
+      "name": "320i",
+      "ctm": "BMW320i2.0"
+    }
+  ],
+  "meta": {
+    "model_series_id": 326,
+    "mode": "light"
+  }
+}</code></pre>
+                            </div>
+
+                            <h6>Full Mode Response:</h6>
+                            <div class="response-example">
+                                <pre><code class="language-json">{
+  "success": true,
+  "data": [
+    {
+      "id": 1432,
+      "name": "320i",
+      "ctm": "BMW320i2.0",
+      "manufacturer": {
+        "id": 36,
+        "name": "BMW"
+      },
+      "model_series": {
+        "id": 326,
+        "name": "3 Series"
+      },
+      "specifications": {
+        "engine_capacity": "2.0L",
+        "power_hp": 150,
+        "fuel_type": "Petrol",
+        "transmission": "Manual"
+      },
+      "compatible_parts_count": 1250
+    }
+  ]
+}</code></pre>
+                            </div>
+
+                            <h6>cURL Example:</h6>
+                            <pre><code class="language-bash">curl "http://koupkastecdoc.gr/tecdoc-api/public/api/v2/models/326/versions?mode=full" \
+  -H "Authorization: Bearer YOUR_TOKEN"</code></pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Part Categories -->
+                <section id="part-categories" class="mb-5">
+                    <div class="endpoint">
+                        <div class="card-header method-get p-3">
+                            <h4><span class="badge bg-success">GET</span> /v2/part-categories</h4>
+                            <p class="mb-0">Get available part categories</p>
+                        </div>
+                        <div class="card-body">
+                            <h6>Query Parameters:</h6>
+                            <ul>
+                                <li><code>mode</code> - Data mode: <code>light</code> (default) or <code>full</code></li>
+                            </ul>
+
+                            <h6>Light Mode Response:</h6>
+                            <div class="response-example">
+                                <pre><code class="language-json">{
+  "success": true,
+  "message": "Part categories retrieved successfully",
+  "data": [
+    {
+      "id": "filters",
+      "name": "ΦΙΛΤΡΑ",
+      "parts": ["Air filter", "Oil filter", "Fuel filter", "Cabin filter"]
+    }
+  ],
+  "meta": {"mode": "light"}
+}</code></pre>
+                            </div>
+
+                            <h6>Full Mode Response:</h6>
+                            <div class="response-example">
+                                <pre><code class="language-json">{
+  "success": true,
+  "data": [
+    {
+      "id": "filters",
+      "name": "ΦΙΛΤΡΑ",
+      "parts": ["Air filter", "Oil filter", "Fuel filter", "Cabin filter"],
+      "description": "Φίλτρα για καθαρισμό αέρα, λαδιού, καυσίμων και καμπίνας",
+      "parts_count": 4,
+      "popular_brands": ["BOSCH", "MANN-FILTER", "MAHLE", "FEBI", "SACHS"],
+      "price_range": {"min": 5.00, "max": 150.00, "currency": "EUR"}
+    }
+  ]
+}</code></pre>
+                            </div>
+
+                            <h6>cURL Example:</h6>
+                            <pre><code class="language-bash">curl "http://koupkastecdoc.gr/tecdoc-api/public/api/v2/part-categories?mode=full" \
+  -H "Authorization: Bearer YOUR_TOKEN"</code></pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Search Articles -->
+                <section id="search-articles" class="mb-5">
+                    <div class="endpoint">
+                        <div class="card-header method-post p-3">
+                            <h4><span class="badge bg-primary">POST</span> /v2/search-articles</h4>
+                            <p class="mb-0">Search for articles/parts</p>
+                        </div>
+                        <div class="card-body">
+                            <h6>Request Body:</h6>
+                            <pre><code class="language-json">{
+  "vehicle_type": "PC",
+  "manufacturer_id": 36,
+  "model_series_id": 326,
+  "vehicle_version_id": 1432,
+  "part_category": "Oil filter",
+  "mode": "light",
+  "per_page": 20,
+  "page": 1
+}</code></pre>
+
+                            <h6>Light Mode Response:</h6>
+                            <div class="response-example">
+                                <pre><code class="language-json">{
+  "success": true,
+  "message": "Data retrieved successfully",
+  "data": [
+    {
+      "id": 102225,
+      "article_number": "00.25",
+      "brand": "POLMO",
+      "supplier_id": 4873,
+      "ctm": 0
+    }
+  ],
+  "meta": {
+    "pagination": {
+      "total": 647386,
+      "per_page": 20,
+      "current_page": 1,
+      "last_page": 32369
+    },
+    "available_brands": ["BOSCH", "MANN-FILTER", "MAHLE"],
+    "search_criteria": {
+      "vehicle_type": "PC",
+      "part_category": "Oil filter",
+      "mode": "light"
+    }
+  }
+}</code></pre>
+                            </div>
+
+                            <h6>cURL Example:</h6>
+                            <pre><code class="language-bash">curl -X POST "http://koupkastecdoc.gr/tecdoc-api/public/api/v2/search-articles" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"vehicle_type":"PC","manufacturer_id":36,"model_series_id":326,"vehicle_version_id":1432,"part_category":"Oil filter","mode":"light"}'</code></pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Article Details -->
+                <section id="article-details" class="mb-5">
+                    <div class="endpoint">
+                        <div class="card-header method-get p-3">
+                            <h4><span class="badge bg-success">GET</span> /v2/articles/{id}/details</h4>
+                            <p class="mb-0">Get detailed article information</p>
+                        </div>
+                        <div class="card-body">
+                            <h6>Path Parameters:</h6>
+                            <ul>
+                                <li><code>id</code> - Article ID (required)</li>
+                            </ul>
+
+                            <h6>Query Parameters:</h6>
+                            <ul>
+                                <li><code>mode</code> - Data mode: <code>light</code> (default) or <code>full</code></li>
+                            </ul>
+
+                            <h6>Light Mode Response:</h6>
+                            <div class="response-example">
+                                <pre><code class="language-json">{
+  "success": true,
+  "message": "Article details retrieved successfully",
+  "data": {
+    "id": 102225,
+    "article_number": "00.25",
+    "brand": "POLMO",
+    "supplier": {
+      "id": 4873,
+      "name": "POLMO"
+    },
+    "ctm": 0
+  },
+  "meta": {"mode": "light"}
+}</code></pre>
+                            </div>
+
+                            <h6>Full Mode Response:</h6>
+                            <div class="response-example">
+                                <pre><code class="language-json">{
+  "success": true,
+  "data": {
+    "id": 102225,
+    "article_number": "00.25",
+    "brand": "POLMO",
+    "supplier": {"id": 4873, "name": "POLMO"},
+    "ctm": 0,
+    "specifications": {
+      "weight": "0.5 kg",
+      "dimensions": "10x5x3 cm",
+      "material": "Steel/Plastic",
+      "warranty_months": 24
+    },
+    "compatibility": {
+      "compatible_vehicles": 150,
+      "vehicle_types": ["PC"],
+      "years_from": 2010,
+      "years_to": 2024
+    },
+    "images": {
+      "thumbnail": "https://images.example.com/articles/102225_thumb.jpg",
+      "medium": "https://images.example.com/articles/102225_medium.jpg",
+      "large": "https://images.example.com/articles/102225_large.jpg"
+    },
+    "price_info": {
+      "retail_price": 45,
+      "wholesale_price": 32,
+      "currency": "EUR",
+      "vat_included": true
+    }
+  }
+}</code></pre>
+                            </div>
+
+                            <h6>cURL Example:</h6>
+                            <pre><code class="language-bash">curl "http://koupkastecdoc.gr/tecdoc-api/public/api/v2/articles/102225/details?mode=full" \
+  -H "Authorization: Bearer YOUR_TOKEN"</code></pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Enhanced Article Details -->
+                <section id="enhanced-article-details" class="mb-5">
+                    <div class="endpoint">
+                        <div class="card-header method-get p-3">
+                            <h4><span class="badge bg-info">GET</span> /api/articles/{id}/details</h4>
+                            <p class="mb-0"><strong>Enhanced Article Details</strong> - Complete information from all database tables</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <i class="fas fa-star me-2"></i>
+                                <strong>New Enhanced Endpoint!</strong> This endpoint provides comprehensive article information including specifications, media, and replacement data from multiple database tables.
+                            </div>
+
+                            <h6>Path Parameters:</h6>
+                            <ul>
+                                <li><code>id</code> - Article ID (required)</li>
+                            </ul>
+
+                            <h6>No Authentication Required</h6>
+                            <p class="text-muted">This endpoint is publicly accessible and doesn't require an API token.</p>
+
+                            <h6>Complete Response Example:</h6>
+                            <div class="response-example">
+                                <pre><code class="language-json">{
+  "success": true,
+  "message": "Article details retrieved successfully",
+  "data": {
+    "basic_info": {
+      "ART_ID": 102225,
+      "ART_ARTICLE_NR": "00.254",
+      "ART_SUP_ID": 4873,
+      "ART_SUP_BRAND": "POLMO",
+      "ART_COMPLETE_DES_ID": 88644,
+      "ART_CTM": 0,
+      "ART_DES_ID": null,
+      "ART_PACK_SELFSERVICE": 0,
+      "ART_MATERIAL_MARK": 0,
+      "ART_REPLACEMENT": 0,
+      "ART_ACCESSORY": 0,
+      "ART_BATCH_SIZE1": null,
+      "ART_BATCH_SIZE2": null
+    },
+    "specifications": [
+      {
+        "criteria_id": 200,
+        "value": "380",
+        "description_id": null,
+        "display": 1
+      },
+      {
+        "criteria_id": 446,
+        "value": "13",
+        "description_id": 189010,
+        "display": 1
+      }
+    ],
+    "media": [
+      {
+        "filename": "d3b0159495696d5ca68d6c43eb36d62420c2173b.webp",
+        "type": "JPEG",
+        "content_type": "ArticlePicture",
+        "dimensions": {
+          "width": null,
+          "height": null
+        },
+        "hyperlink": null
+      }
+    ],
+    "replacements": {
+      "replaces": [
+        {
+          "new_article_id": 105567,
+          "new_article_number": "00.300",
+          "new_brand": "POLMO",
+          "superseded_number": "00.254-OLD"
+        }
+      ],
+      "replaced_by": []
+    }
+  },
+  "performance": {
+    "query_time_ms": 1.47,
+    "cached": true
+  }
+}</code></pre>
+                            </div>
+
+                            <h6>Data Sources:</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-database text-primary me-2"></i>Database Tables Used:</h6>
+                                    <ul>
+                                        <li><strong>ARTICLES</strong> - Basic article information</li>
+                                        <li><strong>ARTICLE_CRITERIA</strong> - Technical specifications</li>
+                                        <li><strong>ART_MEDIA_INFO</strong> - Images and media files</li>
+                                        <li><strong>SUPERSEDED_ARTICLES</strong> - Replacement information</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-chart-bar text-success me-2"></i>Performance:</h6>
+                                    <ul>
+                                        <li><strong>Response Time:</strong> ~1-5ms (cached)</li>
+                                        <li><strong>Cache TTL:</strong> 30 minutes</li>
+                                        <li><strong>Rate Limit:</strong> None (public endpoint)</li>
+                                        <li><strong>Max Specifications:</strong> 20 per article</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <h6>Response Field Descriptions:</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Section</th>
+                                            <th>Field</th>
+                                            <th>Description</th>
+                                            <th>Type</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td rowspan="7">basic_info</td>
+                                            <td>ART_ID</td>
+                                            <td>Unique article identifier</td>
+                                            <td>Integer</td>
+                                        </tr>
+                                        <tr>
+                                            <td>ART_ARTICLE_NR</td>
+                                            <td>Article/part number</td>
+                                            <td>String</td>
+                                        </tr>
+                                        <tr>
+                                            <td>ART_SUP_BRAND</td>
+                                            <td>Supplier brand name</td>
+                                            <td>String</td>
+                                        </tr>
+                                        <tr>
+                                            <td>ART_REPLACEMENT</td>
+                                            <td>Is replacement part (0/1)</td>
+                                            <td>Boolean</td>
+                                        </tr>
+                                        <tr>
+                                            <td>ART_ACCESSORY</td>
+                                            <td>Is accessory (0/1)</td>
+                                            <td>Boolean</td>
+                                        </tr>
+                                        <tr>
+                                            <td>ART_PACK_SELFSERVICE</td>
+                                            <td>Self-service packaging (0/1)</td>
+                                            <td>Boolean</td>
+                                        </tr>
+                                        <tr>
+                                            <td>ART_BATCH_SIZE1/2</td>
+                                            <td>Packaging batch sizes</td>
+                                            <td>Integer</td>
+                                        </tr>
+                                        <tr>
+                                            <td rowspan="2">specifications</td>
+                                            <td>criteria_id</td>
+                                            <td>Technical criteria identifier</td>
+                                            <td>Integer</td>
+                                        </tr>
+                                        <tr>
+                                            <td>value</td>
+                                            <td>Specification value</td>
+                                            <td>String</td>
+                                        </tr>
+                                        <tr>
+                                            <td rowspan="2">media</td>
+                                            <td>filename</td>
+                                            <td>Image/document filename</td>
+                                            <td>String</td>
+                                        </tr>
+                                        <tr>
+                                            <td>content_type</td>
+                                            <td>Media content type</td>
+                                            <td>String</td>
+                                        </tr>
+                                        <tr>
+                                            <td>replacements</td>
+                                            <td>replaces/replaced_by</td>
+                                            <td>Superseded article information</td>
+                                            <td>Array</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <h6>cURL Example:</h6>
+                            <pre><code class="language-bash"># Get enhanced article details
+curl "http://koupkastecdoc.gr/tecdoc-api/public/api/articles/102225/details"
+
+# Example with different article ID
+curl "http://koupkastecdoc.gr/tecdoc-api/public/api/articles/123456/details"</code></pre>
+
+                            <h6>JavaScript Example:</h6>
+                            <pre><code class="language-javascript">// Fetch enhanced article details
+fetch('/api/articles/102225/details')
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      console.log('Basic Info:', data.data.basic_info);
+      console.log('Specifications:', data.data.specifications);
+      console.log('Media:', data.data.media);
+      console.log('Replacements:', data.data.replacements);
+    }
+  });</code></pre>
+
+                            <h6>Error Responses:</h6>
+                            <div class="response-example">
+                                <pre><code class="language-json">// Article not found
+{
+  "success": false,
+  "message": "Article not found"
+}
+
+// Server error
+{
+  "success": false,
+  "message": "Error retrieving article details: Database connection failed"
+}</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Light/Full Modes -->
+                <section id="light-full-modes" class="mb-5">
+                    <h2>📊 Light vs Full Modes</h2>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-success text-white">
+                                    <h5><i class="fas fa-feather me-2"></i>Light Mode (Default)</h5>
+                                </div>
+                                <div class="card-body">
+                                    <ul>
+                                        <li>Essential data only</li>
+                                        <li>Faster response times</li>
+                                        <li>Lower bandwidth usage</li>
+                                        <li>Perfect for dropdowns/lists</li>
+                                    </ul>
+                                    <p><strong>Usage:</strong> <code>?mode=light</code> or no parameter</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-primary text-white">
+                                    <h5><i class="fas fa-database me-2"></i>Full Mode</h5>
+                                </div>
+                                <div class="card-body">
+                                    <ul>
+                                        <li>Complete data sets</li>
+                                        <li>Additional metadata</li>
+                                        <li>Rich information</li>
+                                        <li>Perfect for detailed views</li>
+                                    </ul>
+                                    <p><strong>Usage:</strong> <code>?mode=full</code></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Rate Limiting -->
+                <section id="rate-limiting" class="mb-5">
+                    <h2>⚡ Rate Limiting</h2>
+                    <div class="alert alert-info">
+                        <h5>Current Limits</h5>
+                        <ul class="mb-0">
+                            <li><strong>Requests:</strong> 1000 per hour</li>
+                            <li><strong>Reset:</strong> Every hour from first request</li>
+                            <li><strong>Headers:</strong> X-RateLimit-* in all responses</li>
+                        </ul>
+                    </div>
+
+                    <h6>Rate Limit Headers:</h6>
+                    <pre><code>X-RateLimit-Limit: 1000
+X-RateLimit-Remaining: 995
+X-RateLimit-Reset: 1763989138</code></pre>
+
+                    <h6>Rate Limit Exceeded Response:</h6>
+                    <pre><code class="language-json">{
+  "success": false,
+  "message": "Rate limit exceeded",
+  "error": "RATE_LIMIT_EXCEEDED",
+  "meta": {
+    "requests_limit": 1000,
+    "reset_at": "2025-11-24T13:00:00.000000Z"
+  }
+}</code></pre>
+                </section>
+
+                <!-- Caching -->
+                <section id="caching" class="mb-5">
+                    <h2>🚀 Caching Strategy</h2>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Endpoint</th>
+                                    <th>Cache Time</th>
+                                    <th>Strategy</th>
+                                    <th>Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Vehicle Types</td>
+                                    <td>2 hours</td>
+                                    <td>Static Long</td>
+                                    <td>Rarely changes</td>
+                                </tr>
+                                <tr>
+                                    <td>Part Categories</td>
+                                    <td>2 hours</td>
+                                    <td>Static Long</td>
+                                    <td>Rarely changes</td>
+                                </tr>
+                                <tr>
+                                    <td>Manufacturers</td>
+                                    <td>1 hour</td>
+                                    <td>Semi-Static</td>
+                                    <td>Occasionally updated</td>
+                                </tr>
+                                <tr>
+                                    <td>Models/Versions</td>
+                                    <td>1 hour</td>
+                                    <td>Semi-Static</td>
+                                    <td>Occasionally updated</td>
+                                </tr>
+                                <tr>
+                                    <td>Article Details</td>
+                                    <td>30 minutes</td>
+                                    <td>Standard</td>
+                                    <td>May be updated</td>
+                                </tr>
+                                <tr>
+                                    <td>Search Results</td>
+                                    <td>15 minutes</td>
+                                    <td>Dynamic Short</td>
+                                    <td>Frequently changing</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h6>Client-Side Caching:</h6>
+                    <ul>
+                        <li>Use <code>ETag</code> for conditional requests</li>
+                        <li>Respect <code>Cache-Control</code> headers</li>
+                        <li>Check <code>X-Cache-TTL</code> for optimal timing</li>
+                    </ul>
+                </section>
+
+                <!-- API Testing Interface -->
+                <section id="api-testing" class="mb-5">
+                    <h2>🧪 Live API Testing</h2>
+                    <div class="alert alert-info">
+                        <h5><i class="fas fa-flask me-2"></i>Test API Endpoints Live</h5>
+                        <p>Enter your API token below to test endpoints directly from this page.</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>API Token Setup</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="api-token" class="form-label">API Token:</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="api-token" 
+                                           placeholder="Enter your API token here..." 
+                                           value="tecdoc_3ddMA3ejtIChy9qvWdGCwlLvHvFlqVLiVX1W4Q76MSZU63ACtJGHXoTUdfwi">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="toggleTokenVisibility()">
+                                        <i class="fas fa-eye" id="token-eye"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted">Default token provided for testing. Create your own token using the Create Token endpoint.</small>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <button class="btn btn-primary w-100" onclick="testEndpoint('/v2/vehicle-types')">
+                                        <i class="fas fa-car me-2"></i>Test Vehicle Types
+                                    </button>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <button class="btn btn-success w-100" onclick="testEndpoint('/v2/manufacturers?vehicle_type=PC')">
+                                        <i class="fas fa-industry me-2"></i>Test Manufacturers
+                                    </button>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <button class="btn btn-info w-100" onclick="testEndpoint('/v2/part-categories')">
+                                        <i class="fas fa-cogs me-2"></i>Test Part Categories
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <button class="btn btn-warning w-100" onclick="testEndpoint('/v2/manufacturers/36/models?vehicle_type=PC')">
+                                        <i class="fas fa-list me-2"></i>Test Models (BMW)
+                                    </button>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <button class="btn btn-secondary w-100" onclick="testEndpoint('/v2/auth/token-info')">
+                                        <i class="fas fa-info-circle me-2"></i>Test Token Info
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mt-3" id="test-results" style="display: none;">
+                        <div class="card-header">
+                            <h5>Test Results</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="test-output">
+                                <!-- Results will appear here -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Footer -->
+                <footer class="mt-5 pt-4 border-top">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>🔗 Quick Links</h6>
+                            <ul class="list-unstyled">
+                                <li><a href="#auth-overview">Authentication</a></li>
+                                <li><a href="#vehicle-types">Vehicle Data</a></li>
+                                <li><a href="#search-articles">Search Articles</a></li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>📞 <a href="https://helpdesk.enigmart.gr" target="_blank">Support Tickets </a></h6>
+                            <p>For API support and questions, please contact the development team.</p>
+                            <p><strong>Version:</strong> 2.0 | <strong>Last Updated:</strong> November 2025</p>
+                            <p> Made by enigmart</p>
+                        </div>
+                    </div>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                    
+                    // Update active nav link
+                    document.querySelectorAll('.nav-link').forEach(link => {
+                        link.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                }
+            });
+        });
+
+        // Highlight current section in navigation
+        window.addEventListener('scroll', function() {
+            const sections = document.querySelectorAll('section[id]');
+            const navLinks = document.querySelectorAll('.nav-link[href^="#"]');
+            
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (scrollY >= (sectionTop - 200)) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+
+        // API Testing Functions
+        function toggleTokenVisibility() {
+            const tokenInput = document.getElementById('api-token');
+            const eyeIcon = document.getElementById('token-eye');
+            
+            if (tokenInput.type === 'password') {
+                tokenInput.type = 'text';
+                eyeIcon.className = 'fas fa-eye-slash';
+            } else {
+                tokenInput.type = 'password';
+                eyeIcon.className = 'fas fa-eye';
+            }
+        }
+
+        async function testEndpoint(endpoint) {
+            const token = document.getElementById('api-token').value;
+            const resultsDiv = document.getElementById('test-results');
+            const outputDiv = document.getElementById('test-output');
+            
+            if (!token) {
+                alert('Please enter an API token first');
+                return;
+            }
+
+            // Show loading
+            resultsDiv.style.display = 'block';
+            outputDiv.innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Testing...</span>
+                    </div>
+                    <p class="mt-2">Testing ${endpoint}...</p>
+                </div>
+            `;
+
+            try {
+                const startTime = performance.now();
+                const response = await fetch(`http://koupkastecdoc.gr/tecdoc-api/public/api${endpoint}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const endTime = performance.now();
+                const responseTime = Math.round(endTime - startTime);
+                const data = await response.json();
+
+                // Display results
+                const statusClass = response.ok ? 'success' : 'danger';
+                const statusIcon = response.ok ? 'check-circle' : 'exclamation-circle';
+                
+                outputDiv.innerHTML = `
+                    <div class="alert alert-${statusClass}">
+                        <h6><i class="fas fa-${statusIcon} me-2"></i>
+                            ${response.status} ${response.statusText} 
+                            <small class="text-muted">(${responseTime}ms)</small>
+                        </h6>
+                        <p><strong>Endpoint:</strong> <code>${endpoint}</code></p>
+                        <p><strong>Headers:</strong></p>
+                        <ul class="small">
+                            <li><strong>Cache-Control:</strong> ${response.headers.get('Cache-Control') || 'N/A'}</li>
+                            <li><strong>X-RateLimit-Remaining:</strong> ${response.headers.get('X-RateLimit-Remaining') || 'N/A'}</li>
+                            <li><strong>ETag:</strong> ${response.headers.get('ETag') || 'N/A'}</li>
+                        </ul>
+                    </div>
+                    
+                    <h6>Response Data:</h6>
+                    <div class="response-example">
+                        <pre><code class="language-json">${JSON.stringify(data, null, 2)}</code></pre>
+                    </div>
+                `;
+
+                // Re-highlight code
+                Prism.highlightAll();
+
+            } catch (error) {
+                outputDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <h6><i class="fas fa-exclamation-triangle me-2"></i>Request Failed</h6>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p><strong>Endpoint:</strong> <code>${endpoint}</code></p>
+                    </div>
+                `;
+            }
+        }
+
+        // Add API Testing to sidebar
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.querySelector('.sidebar');
+            const testingSection = `
+                <div class="mb-4">
+                    <h6>🧪 Testing</h6>
+                    <ul class="nav nav-pills flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#api-testing">Live Testing</a>
+                        </li>
+                    </ul>
+                </div>
+            `;
+            sidebar.insertAdjacentHTML('beforeend', testingSection);
+        });
+    </script>
+</body>
+</html>
