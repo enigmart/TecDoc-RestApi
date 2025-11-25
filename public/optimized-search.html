@@ -714,6 +714,123 @@
         let selectedPartCategory = '';
         let currentSearchData = null;
 
+        // Static fallback data for manufacturers
+        function getStaticManufacturers(vehicleType) {
+            const manufacturers = [
+                { id: 1, name: 'AUDI' },
+                { id: 2, name: 'BMW' },
+                { id: 3, name: 'MERCEDES-BENZ' },
+                { id: 4, name: 'VOLKSWAGEN' },
+                { id: 5, name: 'OPEL' },
+                { id: 6, name: 'FORD' },
+                { id: 7, name: 'PEUGEOT' },
+                { id: 8, name: 'RENAULT' },
+                { id: 9, name: 'CITROËN' },
+                { id: 10, name: 'FIAT' },
+                { id: 11, name: 'TOYOTA' },
+                { id: 12, name: 'NISSAN' },
+                { id: 13, name: 'HONDA' },
+                { id: 14, name: 'MAZDA' },
+                { id: 15, name: 'HYUNDAI' },
+                { id: 16, name: 'KIA' },
+                { id: 17, name: 'SKODA' },
+                { id: 18, name: 'SEAT' },
+                { id: 19, name: 'VOLVO' },
+                { id: 20, name: 'ALFA ROMEO' }
+            ];
+            
+            console.log(`📋 Using static manufacturers data (${manufacturers.length} items)`);
+            return manufacturers;
+        }
+
+        // Static fallback data for model series
+        function getStaticModelSeries(manufacturerId) {
+            const modelsByManufacturer = {
+                1: [{ id: 101, name: 'A3', year_start: 2010, year_end: 2024 }, { id: 102, name: 'A4', year_start: 2008, year_end: 2024 }],
+                2: [{ id: 201, name: '3 Series', year_start: 2012, year_end: 2024 }, { id: 202, name: '5 Series', year_start: 2010, year_end: 2024 }],
+                3: [{ id: 301, name: 'C-Class', year_start: 2014, year_end: 2024 }, { id: 302, name: 'E-Class', year_start: 2016, year_end: 2024 }],
+                4: [{ id: 401, name: 'Golf', year_start: 2012, year_end: 2024 }, { id: 402, name: 'Passat', year_start: 2015, year_end: 2024 }]
+            };
+            
+            const models = modelsByManufacturer[manufacturerId] || [
+                { id: 999, name: 'Generic Model', year_start: 2010, year_end: 2024 }
+            ];
+            
+            console.log(`📋 Using static model series data (${models.length} items)`);
+            return models;
+        }
+
+        // Static fallback data for vehicle versions
+        function getStaticVehicleVersions(modelId) {
+            const versions = [
+                { id: 1001, name: '1.6 TDI (105kW / 143HP)', year_start: 2015, year_end: 2024, engine: '1.6 TDI', power_kw: 105, power_hp: 143 },
+                { id: 1002, name: '2.0 TDI (110kW / 150HP)', year_start: 2016, year_end: 2024, engine: '2.0 TDI', power_kw: 110, power_hp: 150 },
+                { id: 1003, name: '1.4 TSI (92kW / 125HP)', year_start: 2014, year_end: 2024, engine: '1.4 TSI', power_kw: 92, power_hp: 125 }
+            ];
+            
+            console.log(`📋 Using static vehicle versions data (${versions.length} items)`);
+            return versions;
+        }
+
+        // Static fallback data for part categories
+        function getStaticPartCategories() {
+            const categories = [
+                {
+                    category: 'ΦΙΛΤΡΑ',
+                    parts: ['Air filter', 'Oil filter', 'Fuel filter', 'Cabin filter']
+                },
+                {
+                    category: 'ΑΝΆΦΛΕΞΗ & ΕΞΑΡΤΉΜΑΤΑ',
+                    parts: ['Spark plug', 'Glow plug', 'Ignition coil', 'Distributor cap']
+                },
+                {
+                    category: 'ΙΜΆΝΤΕΣ & ΕΞΑΡΤΉΜΑΤΑ',
+                    parts: ['Timing belt', 'V-belt', 'Belt tensioner', 'Belt pulley']
+                },
+                {
+                    category: 'ΜΗΧΑΝΙΚΑ ΕΞΑΡΤΉΜΑΤΑ',
+                    parts: ['Thermostat', 'Water pump', 'Oil pump', 'Fuel pump']
+                },
+                {
+                    category: 'ΗΛΕΚΤΡΙΚΑ & ΕΞΑΡΤΉΜΑΤΑ',
+                    parts: ['Battery', 'Alternator', 'Starter', 'EGR valve']
+                },
+                {
+                    category: 'ΑΞΕΣΟΥΆΡ',
+                    parts: ['Wiper blades', 'Light bulbs', 'Fuses']
+                }
+            ];
+            
+            console.log(`📋 Using static part categories data (${categories.length} items)`);
+            return categories;
+        }
+
+        // Show notification when using fallback data
+        function showFallbackNotification() {
+            const existingNotification = document.getElementById('fallback-notification');
+            if (existingNotification) return; // Don't show multiple notifications
+            
+            const notification = document.createElement('div');
+            notification.id = 'fallback-notification';
+            notification.className = 'alert alert-warning alert-dismissible fade show position-fixed';
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+            notification.innerHTML = `
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Λειτουργία Offline</strong><br>
+                Το API δεν είναι διαθέσιμο. Χρησιμοποιούνται δεδομένα δοκιμής.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                if (notification && notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Optimized page loaded, initializing...');
@@ -777,8 +894,21 @@
             select.disabled = true;
             
             try {
-                const response = await fetch(`${API_BASE}/manufacturers?vehicle_type=${vehicleType}`);
-                const manufacturers = await response.json();
+                // Try API first, fallback to static data if it fails
+                let manufacturers;
+                try {
+                    const response = await fetch(`${API_BASE}/manufacturers?vehicle_type=${vehicleType}`);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    manufacturers = await response.json();
+                    console.log('✅ API manufacturers loaded successfully');
+                } catch (apiError) {
+                    console.warn('⚠️ API failed, using static data:', apiError.message);
+                    // Fallback to static manufacturers data
+                    manufacturers = getStaticManufacturers(vehicleType);
+                    showFallbackNotification();
+                }
                 
                 select.innerHTML = '<option value="">Επιλέξτε μάρκα...</option>';
                 
@@ -810,8 +940,19 @@
         async function loadModelSeries(manufacturerId) {
             showLoading('model-loading');
             try {
-                const response = await fetch(`${API_BASE}/manufacturers/${manufacturerId}/models`);
-                const models = await response.json();
+                // Try API first, fallback to static data if it fails
+                let models;
+                try {
+                    const response = await fetch(`${API_BASE}/manufacturers/${manufacturerId}/models`);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    models = await response.json();
+                    console.log('✅ API model series loaded successfully');
+                } catch (apiError) {
+                    console.warn('⚠️ API failed, using static data:', apiError.message);
+                    models = getStaticModelSeries(manufacturerId);
+                }
                 
                 const select = document.getElementById('model-series');
                 select.innerHTML = '<option value="">Επιλέξτε μοντέλο...</option>';
@@ -842,8 +983,19 @@
         async function loadVehicleVersions(modelSeriesId) {
             showLoading('version-loading');
             try {
-                const response = await fetch(`${API_BASE}/models/${modelSeriesId}/versions`);
-                const versions = await response.json();
+                // Try API first, fallback to static data if it fails
+                let versions;
+                try {
+                    const response = await fetch(`${API_BASE}/models/${modelSeriesId}/versions`);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    versions = await response.json();
+                    console.log('✅ API vehicle versions loaded successfully');
+                } catch (apiError) {
+                    console.warn('⚠️ API failed, using static data:', apiError.message);
+                    versions = getStaticVehicleVersions(modelSeriesId);
+                }
                 
                 const select = document.getElementById('vehicle-version');
                 select.innerHTML = '<option value="">Επιλέξτε έκδοση...</option>';
@@ -873,8 +1025,19 @@
 
         async function loadPartCategories() {
             try {
-                const response = await fetch(`${API_BASE}/part-categories`);
-                const categories = await response.json();
+                // Try API first, fallback to static data if it fails
+                let categories;
+                try {
+                    const response = await fetch(`${API_BASE}/part-categories`);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    categories = await response.json();
+                    console.log('✅ API part categories loaded successfully');
+                } catch (apiError) {
+                    console.warn('⚠️ API failed, using static data:', apiError.message);
+                    categories = getStaticPartCategories();
+                }
                 
                 const container = document.getElementById('part-categories');
                 container.innerHTML = '';
