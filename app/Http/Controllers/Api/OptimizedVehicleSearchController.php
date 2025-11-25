@@ -189,118 +189,128 @@ class OptimizedVehicleSearchController extends Controller
             $modelId = $request->input('model_series_id');
             $versionId = $request->input('vehicle_version_id');
             $partCategory = $request->input('part_category');
+            $searchTerm = $request->input('search_term');
+            $searchType = $request->input('search_type', 'general');
             $page = $request->input('page', 1);
             $perPage = $request->input('per_page', 20);
             $enhanced = $request->input('enhanced', false);
 
-            // Enhanced caching key
+            // Enhanced caching key including search parameters
             $cacheKey = "search_articles_" . md5(serialize([
-                $vehicleType, $manufacturerId, $modelId, $versionId, $partCategory, $page, $perPage, $enhanced
+                $vehicleType, $manufacturerId, $modelId, $versionId, $partCategory, $searchTerm, $searchType, $page, $perPage, $enhanced
             ]));
 
-            $searchResults = Cache::remember($cacheKey, config('cache.search_ttl'), function() use (
-                $vehicleType, $manufacturerId, $modelId, $versionId, $partCategory, $page, $perPage, $enhanced
-            ) {
-                $baseFields = [
-                    'a.ART_ID',
-                    'a.ART_ARTICLE_NR', 
-                    'a.ART_SUP_BRAND',
-                    'a.ART_CTM',
-                    'a.ART_SUP_ID',
-                    'al.ARL_SEARCH_NUMBER as BARCODE_EAN'
-                ];
+            $baseFields = [
+                'a.ART_ID',
+                'a.ART_ARTICLE_NR', 
+                'a.ART_SUP_BRAND',
+                'a.ART_CTM',
+                'a.ART_SUP_ID',
+                'al.ARL_SEARCH_NUMBER as BARCODE_EAN'
+            ];
 
-                if ($enhanced) {
-                    $baseFields = array_merge($baseFields, [
-                        'a.ART_COMPLETE_DES_ID',
-                        'a.ART_DES_ID',
-                        'a.ART_PACK_SELFSERVICE',
-                        'a.ART_MATERIAL_MARK',
-                        'a.ART_REPLACEMENT',
-                        'a.ART_ACCESSORY',
-                        'a.ART_BATCH_SIZE1',
-                        'a.ART_BATCH_SIZE2'
-                    ]);
-                }
+            if ($enhanced) {
+                $baseFields = array_merge($baseFields, [
+                    'a.ART_COMPLETE_DES_ID',
+                    'a.ART_DES_ID',
+                    'a.ART_PACK_SELFSERVICE',
+                    'a.ART_MATERIAL_MARK',
+                    'a.ART_REPLACEMENT',
+                    'a.ART_ACCESSORY',
+                    'a.ART_BATCH_SIZE1',
+                    'a.ART_BATCH_SIZE2'
+                ]);
+            }
 
-                $query = DB::table('ARTICLES as a')
-                    ->select($baseFields)
-                    ->leftJoin('ART_LOOKUP as al', function($join) {
-                        $join->on('a.ART_ID', '=', 'al.ARL_ART_ID')
-                             ->where('al.ARL_TYPE', '=', 'EAN');
+            $query = DB::table('ARTICLES as a')
+                ->select($baseFields)
+                ->leftJoin('ART_LOOKUP as al', function($join) {
+                    $join->on('a.ART_ID', '=', 'al.ARL_ART_ID')
+                         ->where('al.ARL_TYPE', '=', 'EAN');
+                });
+
+            // Add EAN barcode search
+            if ($searchTerm && $searchType === 'ean') {
+                $query->where('al.ARL_SEARCH_NUMBER', $searchTerm);
+            }
+
+            // Add general search term
+            if ($searchTerm && $searchType === 'general') {
+                $query->where(function($q) use ($searchTerm) {
+                    $q->where('a.ART_ARTICLE_NR', 'LIKE', "%{$searchTerm}%")
+                      ->orWhere('a.ART_SUP_BRAND', 'LIKE', "%{$searchTerm}%")
+                      ->orWhere('al.ARL_SEARCH_NUMBER', 'LIKE', "%{$searchTerm}%");
+                });
+            }
+
+            // Add vehicle filters
+            if ($versionId) {
+                $query->join('LINK_ART as la', 'a.ART_ID', '=', 'la.LA_ART_ID')
+                      ->join('LINK_ART_PT as lapt', 'la.LA_ID', '=', 'lapt.LAPT_LA_ID')
+                      ->join('PASSENGER_CARS as pc', 'lapt.LAPT_PC_ID', '=', 'pc.PC_ID')
+                      ->where('pc.PC_ID', $versionId);
+            } elseif ($modelId) {
+                $query->join('LINK_ART as la', 'a.ART_ID', '=', 'la.LA_ART_ID')
+                      ->join('LINK_ART_PT as lapt', 'la.LA_ID', '=', 'lapt.LAPT_LA_ID')
+                      ->join('PASSENGER_CARS as pc', 'lapt.LAPT_PC_ID', '=', 'pc.PC_ID')
+                      ->where('pc.PC_MS_ID', $modelId);
+            } elseif ($manufacturerId) {
+                $query->join('LINK_ART as la', 'a.ART_ID', '=', 'la.LA_ART_ID')
+                      ->join('LINK_ART_PT as lapt', 'la.LA_ID', '=', 'lapt.LAPT_LA_ID')
+                      ->join('PASSENGER_CARS as pc', 'lapt.LAPT_PC_ID', '=', 'pc.PC_ID')
+                      ->where('pc.PC_MFA_ID', $manufacturerId);
+            }
+
+            // Add part category filter
+            $partKeywords = [];
+            if ($partCategory) {
+                $partKeywords = $this->getPartKeywords($partCategory);
+                if (!empty($partKeywords)) {
+                    $query->where(function($q) use ($partKeywords) {
+                        foreach ($partKeywords as $keyword) {
+                            $q->orWhere('a.ART_ARTICLE_NR', 'LIKE', "%{$keyword}%")
+                              ->orWhere('a.ART_SUP_BRAND', 'LIKE', "%{$keyword}%");
+                        }
                     });
-
-                // Add vehicle filters
-                if ($versionId) {
-                    $query->join('LINK_ART as la', 'a.ART_ID', '=', 'la.LA_ART_ID')
-                          ->join('LINK_ART_PT as lapt', 'la.LA_ID', '=', 'lapt.LAPT_LA_ID')
-                          ->join('PASSENGER_CARS as pc', 'lapt.LAPT_PC_ID', '=', 'pc.PC_ID')
-                          ->where('pc.PC_ID', $versionId);
-                } elseif ($modelId) {
-                    $query->join('LINK_ART as la', 'a.ART_ID', '=', 'la.LA_ART_ID')
-                          ->join('LINK_ART_PT as lapt', 'la.LA_ID', '=', 'lapt.LAPT_LA_ID')
-                          ->join('PASSENGER_CARS as pc', 'lapt.LAPT_PC_ID', '=', 'pc.PC_ID')
-                          ->where('pc.PC_MS_ID', $modelId);
-                } elseif ($manufacturerId) {
-                    $query->join('LINK_ART as la', 'a.ART_ID', '=', 'la.LA_ART_ID')
-                          ->join('LINK_ART_PT as lapt', 'la.LA_ID', '=', 'lapt.LAPT_LA_ID')
-                          ->join('PASSENGER_CARS as pc', 'lapt.LAPT_PC_ID', '=', 'pc.PC_ID')
-                          ->where('pc.PC_MFA_ID', $manufacturerId);
                 }
+            }
 
-                // Add part category filter
-                if ($partCategory) {
-                    $partKeywords = $this->getPartCategoryKeywords($partCategory);
-                    if (!empty($partKeywords)) {
-                        $query->where(function($q) use ($partKeywords) {
-                            foreach ($partKeywords as $keyword) {
-                                $q->orWhere('a.ART_ARTICLE_NR', 'LIKE', "%{$keyword}%")
-                                  ->orWhere('a.ART_SUP_BRAND', 'LIKE', "%{$keyword}%");
-                            }
-                        });
-                    }
-                }
+            // Get paginated results
+            $articles = $query->paginate($perPage, ['*'], 'page', $page);
 
-                return $query->paginate($perPage, ['*'], 'page', $page);
-            });
+            $queryTime = round((microtime(true) - $startTime) * 1000, 2);
 
-        // Get paginated results with reduced page size for better performance
-        $articles = $query->paginate(30); // Reduced from 50 to 30
+            // Prepare response
+            $response = $articles->toArray();
+            $response['performance'] = [
+                'query_time_ms' => $queryTime,
+                'cache_key' => $cacheKey,
+                'cached' => false,
+                'search_type' => $searchType,
+                'search_term' => $searchTerm,
+                'keywords_used' => $partKeywords
+            ];
+            $response['debug_info'] = [
+                'part_category' => $partCategory,
+                'search_term' => $searchTerm,
+                'search_type' => $searchType,
+                'keywords_used' => $partKeywords,
+                'vehicle_info' => [
+                    'manufacturer_id' => $manufacturerId,
+                    'model_series_id' => $modelId,
+                    'vehicle_version_id' => $versionId
+                ]
+            ];
 
-        // Get available brands for filtering (cache separately)
-        $brandsKey = TecDocCacheService::getBrandsCacheKey($searchData);
-        $availableBrands = TecDocCacheService::getCachedBrands($brandsKey);
-        
-        if (!$availableBrands) {
-            $availableBrands = $this->getAvailableBrands($query, $partKeywords);
-            TecDocCacheService::cacheBrands($brandsKey, $availableBrands);
+            return response()->json($response);
+        } catch (\Exception $e) {
+            Log::error('Search articles error: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error searching articles: ' . $e->getMessage()
+            ], 500);
         }
-
-        $queryTime = round((microtime(true) - $startTime) * 1000, 2);
-
-        // Prepare response
-        $response = $articles->toArray();
-        $response['available_brands'] = $availableBrands;
-        $response['performance'] = [
-            'query_time_ms' => $queryTime,
-            'cache_key' => $cacheKey,
-            'cached' => false,
-            'keywords_used' => $partKeywords
-        ];
-        $response['debug_info'] = [
-            'part_category' => $request->part_category,
-            'keywords_used' => $partKeywords,
-            'vehicle_info' => [
-                'manufacturer_id' => $request->manufacturer_id,
-                'model_series_id' => $request->model_series_id,
-                'vehicle_version_id' => $request->vehicle_version_id
-            ]
-        ];
-
-        // Cache the results for future requests
-        TecDocCacheService::cacheSearchResults($cacheKey, $response);
-
-        return response()->json($response);
     }
 
     /**
@@ -428,150 +438,4 @@ class OptimizedVehicleSearchController extends Controller
         return $keywordMap[$partCategory] ?? [];
     }
 
-    /**
-     * Get enhanced article details with all available information
-     */
-    public function getArticleDetails(Request $request, $articleId)
-    {
-        $startTime = microtime(true);
-        
-        try {
-            $cacheKey = "article_details_enhanced_{$articleId}";
-            
-            $articleDetails = Cache::remember($cacheKey, 3600, function() use ($articleId) {
-                // Get basic article info
-                $article = DB::table('ARTICLES')
-                    ->where('ART_ID', $articleId)
-                    ->first();
-                
-                if (!$article) {
-                    return null;
-                }
-                
-                // Get article criteria (specifications)
-                $criteria = DB::table('ARTICLE_CRITERIA as ac')
-                    ->select([
-                        'ac.ACR_CRI_ID',
-                        'ac.ACR_VALUE',
-                        'ac.ACR_DES_ID',
-                        'ac.ACR_DISPLAY'
-                    ])
-                    ->where('ac.ACR_ART_ID', $articleId)
-                    ->get();
-                
-                // Get media information (images, documents)
-                $media = DB::table('ART_MEDIA_INFO as ami')
-                    ->select([
-                        'ami.ART_MEDIA_FILE_NAME',
-                        'ami.ART_MEDIA_TYPE',
-                        'ami.ART_MEDIA_CONTENT_TYPE',
-                        'ami.ART_MEDIA_WIDTH',
-                        'ami.ART_MEDIA_HEIGHT',
-                        'ami.ART_MEDIA_HIPPERLINK as ART_MEDIA_HYPERLINK'
-                    ])
-                    ->where('ami.ART_MEDIA_ART_ID', $articleId)
-                    ->limit(10)
-                    ->get();
-                
-                // Get superseded/replacement info
-                $replacements = DB::table('SUPERSEDED_ARTICLES as sa')
-                    ->select([
-                        'sa.SUA_NEW_ART_ID',
-                        'sa.SUA_NUMBER',
-                        'new_art.ART_ARTICLE_NR as NEW_ARTICLE_NR',
-                        'new_art.ART_SUP_BRAND as NEW_BRAND'
-                    ])
-                    ->leftJoin('ARTICLES as new_art', 'sa.SUA_NEW_ART_ID', '=', 'new_art.ART_ID')
-                    ->where('sa.SUA_ART_ID', $articleId)
-                    ->get();
-                
-                // Get replaced by (articles that this one replaces)
-                $replacedBy = DB::table('SUPERSEDED_ARTICLES as sa')
-                    ->select([
-                        'sa.SUA_ART_ID as OLD_ART_ID',
-                        'sa.SUA_NUMBER as OLD_NUMBER',
-                        'old_art.ART_ARTICLE_NR as OLD_ARTICLE_NR',
-                        'old_art.ART_SUP_BRAND as OLD_BRAND'
-                    ])
-                    ->leftJoin('ARTICLES as old_art', 'sa.SUA_ART_ID', '=', 'old_art.ART_ID')
-                    ->where('sa.SUA_NEW_ART_ID', $articleId)
-                    ->get();
-                
-                return [
-                    'article' => $article,
-                    'criteria' => $criteria,
-                    'media' => $media,
-                    'replacements' => $replacements,
-                    'replaced_by' => $replacedBy
-                ];
-            });
-            
-            if (!$articleDetails || !$articleDetails['article']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Article not found'
-                ], 404);
-            }
-            
-            $queryTime = round((microtime(true) - $startTime) * 1000, 2);
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Article details retrieved successfully',
-                'data' => [
-                    'basic_info' => $articleDetails['article'],
-                    'specifications' => $articleDetails['criteria']->map(function($criteria) {
-                        return [
-                            'criteria_id' => $criteria->ACR_CRI_ID,
-                            'value' => $criteria->ACR_VALUE,
-                            'description_id' => $criteria->ACR_DES_ID,
-                            'display' => $criteria->ACR_DISPLAY
-                        ];
-                    }),
-                    'media' => $articleDetails['media']->map(function($media) {
-                        return [
-                            'filename' => $media->ART_MEDIA_FILE_NAME,
-                            'type' => $media->ART_MEDIA_TYPE,
-                            'content_type' => $media->ART_MEDIA_CONTENT_TYPE,
-                            'dimensions' => [
-                                'width' => $media->ART_MEDIA_WIDTH,
-                                'height' => $media->ART_MEDIA_HEIGHT
-                            ],
-                            'hyperlink' => $media->ART_MEDIA_HYPERLINK
-                        ];
-                    }),
-                    'replacements' => [
-                        'replaces' => $articleDetails['replacements']->map(function($replacement) {
-                            return [
-                                'new_article_id' => $replacement->SUA_NEW_ART_ID,
-                                'new_article_number' => $replacement->NEW_ARTICLE_NR,
-                                'new_brand' => $replacement->NEW_BRAND,
-                                'superseded_number' => $replacement->SUA_NUMBER
-                            ];
-                        }),
-                        'replaced_by' => $articleDetails['replaced_by']->map(function($old) {
-                            return [
-                                'old_article_id' => $old->OLD_ART_ID,
-                                'old_article_number' => $old->OLD_ARTICLE_NR,
-                                'old_brand' => $old->OLD_BRAND,
-                                'old_number' => $old->OLD_NUMBER
-                            ];
-                        })
-                    ]
-                ],
-                'performance' => [
-                    'query_time_ms' => $queryTime,
-                    'cached' => false
-                ]
-            ]);
-            
-        } catch (\Exception $e) {
-            Log::error('Enhanced article details error: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Error retrieving article details'
-            ], 500);
-        }
-    }
 }

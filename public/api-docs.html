@@ -92,6 +92,9 @@
                             <a class="nav-link" href="#article-details">Article Details</a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" href="#ean-barcode-search">EAN Barcode Search</a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="#enhanced-article-details"><i class="fas fa-star text-warning me-1"></i>Enhanced Article Details</a>
                         </li>
                     </ul>
@@ -899,6 +902,173 @@ fetch('/api/articles/102225/details')
   "message": "Error retrieving article details: Database connection failed"
 }</code></pre>
                             </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- EAN Barcode Search -->
+                <section id="ean-barcode-search" class="mb-5">
+                    <div class="endpoint">
+                        <div class="card-header method-post p-3">
+                            <h4><span class="badge bg-warning">POST</span> /api/optimized-search/search-articles</h4>
+                            <p class="mb-0"><strong>EAN Barcode Search</strong> - Search articles by EAN barcode</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-barcode me-2"></i>
+                                <strong>New EAN Search Feature!</strong> Search for articles using EAN barcodes for precise product identification.
+                            </div>
+
+                            <h6>Request Body (EAN Search):</h6>
+                            <div class="response-example">
+                                <pre><code class="language-json">{
+  "search_term": "5904157343445",
+  "search_type": "ean",
+  "per_page": 10
+}</code></pre>
+                            </div>
+
+                            <h6>Request Body (General Search):</h6>
+                            <div class="response-example">
+                                <pre><code class="language-json">{
+  "search_term": "00.42",
+  "search_type": "general",
+  "per_page": 20
+}</code></pre>
+                            </div>
+
+                            <h6>Parameters:</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Parameter</th>
+                                            <th>Type</th>
+                                            <th>Required</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><code>search_term</code></td>
+                                            <td>String</td>
+                                            <td>Yes</td>
+                                            <td>EAN barcode or search term</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>search_type</code></td>
+                                            <td>String</td>
+                                            <td>No</td>
+                                            <td><code>ean</code> or <code>general</code> (default: general)</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>per_page</code></td>
+                                            <td>Integer</td>
+                                            <td>No</td>
+                                            <td>Results per page (default: 20, max: 100)</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>page</code></td>
+                                            <td>Integer</td>
+                                            <td>No</td>
+                                            <td>Page number (default: 1)</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <h6>Response Example (EAN Search):</h6>
+                            <div class="response-example">
+                                <pre><code class="language-json">{
+  "current_page": 1,
+  "data": [
+    {
+      "ART_ID": 102261,
+      "ART_ARTICLE_NR": "00.42",
+      "ART_SUP_BRAND": "POLMO",
+      "ART_CTM": 0,
+      "ART_SUP_ID": 4873,
+      "BARCODE_EAN": "5904157343445"
+    }
+  ],
+  "first_page_url": "http://localhost?page=1",
+  "from": 1,
+  "last_page": 1,
+  "last_page_url": "http://localhost?page=1",
+  "next_page_url": null,
+  "path": "http://localhost",
+  "per_page": 10,
+  "prev_page_url": null,
+  "to": 1,
+  "total": 1,
+  "performance": {
+    "query_time_ms": 2.15,
+    "cache_key": "search_articles_...",
+    "cached": false,
+    "search_type": "ean",
+    "search_term": "5904157343445",
+    "keywords_used": []
+  }
+}</code></pre>
+                            </div>
+
+                            <h6>Sample EAN Barcodes for Testing:</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Article ID</th>
+                                            <th>Product Code</th>
+                                            <th>EAN Barcode</th>
+                                            <th>Brand</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>102261</td>
+                                            <td>00.42</td>
+                                            <td><code>5904157343445</code></td>
+                                            <td>POLMO</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <h6>cURL Examples:</h6>
+                            <pre><code class="language-bash"># Search by EAN barcode
+curl -X POST "http://koupkastecdoc.gr/tecdoc-api/public/api/optimized-search/search-articles" \
+  -H "Content-Type: application/json" \
+  -d '{"search_term": "5904157343445", "search_type": "ean", "per_page": 10}'
+
+# General search
+curl -X POST "http://koupkastecdoc.gr/tecdoc-api/public/api/optimized-search/search-articles" \
+  -H "Content-Type: application/json" \
+  -d '{"search_term": "00.42", "search_type": "general", "per_page": 20}'</code></pre>
+
+                            <h6>JavaScript Example:</h6>
+                            <pre><code class="language-javascript">// Search by EAN barcode
+async function searchByEAN(ean) {
+  const response = await fetch('/api/optimized-search/search-articles', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      search_term: ean,
+      search_type: 'ean',
+      per_page: 10
+    })
+  });
+  
+  const data = await response.json();
+  if (data.data && data.data.length > 0) {
+    console.log('Found article:', data.data[0]);
+    console.log('EAN:', data.data[0].BARCODE_EAN);
+  }
+}
+
+// Usage
+searchByEAN('5904157343445');</code></pre>
                         </div>
                     </div>
                 </section>

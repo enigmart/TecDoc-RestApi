@@ -265,23 +265,46 @@
 					"response": []
 				},
 				{
-					"name": "Get Enhanced Details - Sample Articles",
+					"name": "Get Enhanced Details with EAN Barcode",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
 								"exec": [
-									"// Test multiple sample articles",
-									"const sampleArticles = [102225, 102226, 102227, 102228];",
-									"const currentArticle = pm.environment.get('current_test_article') || 102225;",
-									"",
-									"pm.test('✅ Sample article details retrieved', function () {",
+									"// Test article details with EAN barcode",
+									"pm.test(' Article details retrieved successfully', function () {",
 									"    pm.response.to.have.status(200);",
-									"    const responseJson = pm.response.json();",
-									"    pm.expect(responseJson.success).to.be.true;",
-									"    ",
-									"    console.log(`🧪 Testing article ID: ${currentArticle}`);",
-									"    console.log(`📊 Response size: ${JSON.stringify(responseJson).length} bytes`);",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.success).to.be.true;",
+									"    pm.expect(response.data).to.have.property('basic_info');",
+									"    pm.expect(response.data).to.have.property('specifications');",
+									"    pm.expect(response.data).to.have.property('media');",
+									"    pm.expect(response.data).to.have.property('replacements');",
+									"});",
+									"",
+									"pm.test(' EAN Barcode is included', function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.data.basic_info).to.have.property('BARCODE_EAN');",
+									"    if (response.data.basic_info.BARCODE_EAN) {",
+									"        console.log('EAN Barcode:', response.data.basic_info.BARCODE_EAN);",
+									"    }",
+									"});",
+									"",
+									"pm.test(' Specifications have proper names', function () {",
+									"    const response = pm.response.json();",
+									"    if (response.data.specifications.length > 0) {",
+									"        const spec = response.data.specifications[0];",
+									"        pm.expect(spec).to.have.property('criteria_name');",
+									"        pm.expect(spec).to.have.property('criteria_type');",
+									"        console.log('Sample specification:', spec.criteria_name, '=', spec.value);",
+									"    }",
+									"});",
+									"",
+									"pm.test(' Performance metrics included', function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('performance');",
+									"    pm.expect(response.performance).to.have.property('query_time_ms');",
+									"    console.log('Query time:', response.performance.query_time_ms + 'ms');",
 									"});"
 								],
 								"type": "text/javascript"
@@ -292,17 +315,72 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/articles/102226/details",
+							"raw": "{{base_url}}/articles/102261/details",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"articles",
-								"102226",
+								"102261",
 								"details"
 							]
 						},
-						"description": "Test the enhanced article details endpoint with different sample article IDs to verify consistency and data availability."
+						"description": "Get enhanced article details including EAN barcode, specifications with proper names, media info, and replacement data. Sample article 102261 (code: 00.42) has EAN: 5904157343445"
+					},
+					"response": []
+				},
+				{
+					"name": "Test EAN Barcode Search",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test EAN barcode search functionality",
+									"pm.test('✅ EAN barcode search works', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.success).to.be.true;",
+									"});",
+									"",
+									"pm.test('✅ Article found by EAN', function () {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.length > 0) {",
+									"        const article = response.data[0];",
+									"        pm.expect(article).to.have.property('ART_ID');",
+									"        pm.expect(article).to.have.property('ART_ARTICLE_NR');",
+									"        pm.expect(article).to.have.property('BARCODE_EAN');",
+									"        console.log('Found article:', article.ART_ARTICLE_NR, 'with EAN:', article.BARCODE_EAN);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"search_term\": \"5904157343445\",\n  \"search_type\": \"ean\",\n  \"per_page\": 10\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/optimized-search/search-articles",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"optimized-search",
+								"search-articles"
+							]
+						},
+						"description": "Search for articles using EAN barcode. This test uses the known EAN 5904157343445 for article 102261 (code: 00.42)"
 					},
 					"response": []
 				}
