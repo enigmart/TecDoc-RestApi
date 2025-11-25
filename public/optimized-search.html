@@ -710,7 +710,7 @@
     </div>
 
     <script>
-        const API_BASE = window.location.origin + '/tecdoc-api/public/api/vehicle-search';
+        const API_BASE = window.location.origin + '/tecdoc-api/public/api/optimized-search';
         let selectedPartCategory = '';
         let currentSearchData = null;
 
@@ -1868,7 +1868,7 @@
 
         // Load article details inline
         function loadArticleDetailsInline(articleId, container, loadingSpinner, isTableView = false) {
-            fetch(`/tecdoc-api/public/api/articles/${articleId}/details`)
+            fetch(`${window.location.origin}/tecdoc-api/public/api/articles/${articleId}/details`)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
@@ -2073,7 +2073,7 @@
             loadingInstance.show();
 
             // Fetch enhanced details from API
-            fetch(`/tecdoc-api/public/api/articles/${articleId}/details`)
+            fetch(`${window.location.origin}/tecdoc-api/public/api/articles/${articleId}/details`)
                 .then(response => {
                     console.log('Response status:', response.status);
                     if (!response.ok) {
@@ -2437,11 +2437,11 @@
             // Update current page
             window.currentPage = page;
             
-            // Get current search parameters
+            // Get current search parameters with correct element IDs
             const vehicleType = document.getElementById('vehicle-type').value;
-            const manufacturerId = document.getElementById('manufacturer-select').value;
-            const modelId = document.getElementById('model-select').value;
-            const versionId = document.getElementById('version-select').value;
+            const manufacturerId = document.getElementById('manufacturer').value;
+            const modelId = document.getElementById('model-series').value;
+            const versionId = document.getElementById('vehicle-version').value;
             const partCategory = document.querySelector('.part-item.selected')?.textContent || '';
             
             // Prepare search data with new page
@@ -2462,7 +2462,7 @@
             document.querySelectorAll('.page-link').forEach(btn => btn.style.pointerEvents = 'none');
             
             // Make API call
-            fetch('/tecdoc-api/public/api/optimized-search/search-articles', {
+            fetch(`${API_BASE}/search-articles`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -2470,13 +2470,21 @@
                 },
                 body: JSON.stringify(searchData)
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
+                console.log('Pagination data received:', data);
                 const resultsContainer = document.getElementById('search-results');
                 if (data && (data.data || data.total > 0)) {
                     displaySearchResults(data, resultsContainer);
+                    // Scroll to top of results
+                    resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 } else {
-                    resultsContainer.innerHTML = '<div class="alert alert-warning">Δεν βρέθηκαν αποτελέσματα για αυτή τη σελίδα</div>';
+                    resultsContainer.innerHTML = '<div class="alert alert-warning"><i class="fas fa-info-circle me-2"></i>Δεν βρέθηκαν αποτελέσματα για τη σελίδα ' + page + '</div>';
                 }
             })
             .catch(error => {
